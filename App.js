@@ -1,21 +1,106 @@
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  Image,
+  TouchableOpacity,
+  Pressable,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import LoginDropdown from './LoginDropdown';
 
 export default function App() {
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const toggleDropdown = () => {
+    setShowDropdown((prev) => !prev);
+  };
+
+  const handleOutsidePress = () => {
+    setShowDropdown(false);
+  };
+
+  const loginImg = require('./assets/icons8-login-100.png');
+  const logoImg = require('./assets/220110779.png');
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
+    <View style={styles.root}>
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <Image source={logoImg} style={styles.logo} />
+      </View>
+
+      {/* Icon */}
+      <View style={styles.iconContainer}>
+        <TouchableOpacity onPress={toggleDropdown}>
+          <Image source={loginImg} style={styles.icon} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Overlay to detect outside touch */}
+      {showDropdown && (
+        <>
+          <Pressable style={styles.overlay} onPress={handleOutsidePress} />
+          <View style={styles.dropdownContainer}>
+            <LoginDropdown
+              onProfile={() => {
+                alert('Profile selected');
+                handleOutsidePress();
+              }}
+              onLogout={() => {
+                alert('Logout selected');
+                handleOutsidePress();
+              }}
+              onAbout={() => {
+                alert('About selected');
+                handleOutsidePress();
+              }}
+            />
+          </View>
+        </>
+      )}
+
       <StatusBar style="auto" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFAFA',
+    paddingTop: Dimensions.get('window').height * 0.05,
+  },
+  logoContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logo: {
+    width: 100,
+    height: Dimensions.get('window').height * 0.12,
+    resizeMode: 'contain',
+  },
+  iconContainer: {
+    position: 'absolute',
+    top: Dimensions.get('window').height * 0.045,
+    right: Dimensions.get('window').width * 0.05,
+    zIndex: 50,
+  },
+  icon: {
+    width: 25,
+    height: 25,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    zIndex: 40,
+  },
+  dropdownContainer: {
+    position: 'absolute',
+    top: Dimensions.get('window').height * 0.09,
+    right: Dimensions.get('window').width * 0.05,
+    zIndex: 45,
   },
 });
