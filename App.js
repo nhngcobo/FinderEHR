@@ -9,9 +9,12 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import LoginDropdown from './LoginDropdown';
+import LoginComponent from './LoginComponent';
 
 export default function App() {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
 
   const toggleDropdown = () => {
     setShowDropdown((prev) => !prev);
@@ -36,14 +39,13 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* Overlay to detect outside touch */}
       {showDropdown && (
         <>
           <Pressable style={styles.overlay} onPress={handleOutsidePress} />
           <View style={styles.dropdownContainer}>
             <LoginDropdown
               onProfile={() => {
-                alert('Profile selected');
+                setShowLoginModal(true);
                 handleOutsidePress();
               }}
               onLogout={() => {
@@ -57,6 +59,13 @@ export default function App() {
             />
           </View>
         </>
+      )}
+
+      {showLoginModal && (
+        <LoginComponent 
+          visible={showLoginModal} 
+          onClose={() => setShowLoginModal(false)} 
+        />
       )}
 
       <StatusBar style="auto" />
