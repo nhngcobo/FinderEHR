@@ -26,12 +26,10 @@ export default function App() {
 
   return (
     <View style={styles.root}>
-      {/* Logo */}
       <View style={styles.logoContainer}>
         <Image source={logoImg} style={styles.logo} />
       </View>
 
-      {/* Icon */}
       <View style={styles.iconContainer}>
         <TouchableOpacity onPress={toggleDropdown}>
           <Image source={loginImg} style={styles.icon} />
@@ -75,7 +73,6 @@ const styles = StyleSheet.create({
   logoContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   logo: {
     width: 100,
@@ -84,7 +81,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     position: 'absolute',
-    top: Dimensions.get('window').height * 0.045,
+    top: Dimensions.get('window').height * 0.09,
     right: Dimensions.get('window').width * 0.05,
     zIndex: 50,
   },

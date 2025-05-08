@@ -24,12 +24,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    zIndex: 50, // Make sure it's above the overlay
+    zIndex: 50,
   },
   dropdown: {
-    marginTop: Dimensions.get('window').height * 0.07,
+    marginTop: Dimensions.get('window').height * 0.03,
     marginRight: Dimensions.get('window').width * 0.05,
-    width: 120,
+    width: 100,
     backgroundColor: '#ffffff',
     borderRadius: 6,
     paddingVertical: 6,
