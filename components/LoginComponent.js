@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Modal,
     View,
@@ -8,8 +8,8 @@ import {
     Dimensions,
     TextInput,
     TouchableWithoutFeedback,
-    ScrollView,
-    Keyboard
+    Keyboard,
+    Animated
 } from 'react-native';
 import SignUpComponent from './SignUpComponent';
 
@@ -18,7 +18,53 @@ export default function LoginComponent({ visible, onClose }) {
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [unauthorizedError, setUnauthorizedError] = useState('');
     const [showSignUpModal, setShowSignUpModal] = useState(false);
+
+    const shakeAnim = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+    useEffect(() => {
+        if (visible) {
+            fadeAnim.setValue(0);
+            scaleAnim.setValue(0.8);
+            setTimeout(() => {
+                Animated.parallel([
+                    Animated.timing(fadeAnim, {
+                        toValue: 1,
+                        duration: 300,
+                        useNativeDriver: true,
+                    }),
+                    Animated.spring(scaleAnim, {
+                        toValue: 1,
+                        friction: 6,
+                        tension: 80,
+                        useNativeDriver: true,
+                    }),
+                ]).start();
+            }, 50);
+        }
+    }, [visible]);
+    
+
+    useEffect(() => {
+        if (unauthorizedError) {
+            Animated.sequence([
+                Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+            ]).start();
+
+            const timeout = setTimeout(() => {
+                setUnauthorizedError('');
+            }, 4000);
+
+            return () => clearTimeout(timeout);
+        }
+    }, [unauthorizedError]);
 
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const validatePassword = (password) =>
@@ -36,21 +82,40 @@ export default function LoginComponent({ visible, onClose }) {
 
     const onRegister = () => {
         setShowSignUpModal(true);
+        onClose(); 
+    };
+
+    const login = async () => {
+        try {
+            const response = await fetch('https://finderehr-h0d3h4dke3ddftct.canadacentral-01.azurewebsites.net/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                onClose();
+            } else if (response.status === 401) {
+                setUnauthorizedError("Invalid Credentials");
+            }
+        } catch (err) {
+            console.error("Network error:", err);
+        }
     };
 
     return (
         <>
-            {/* Login Modal */}
-            <Modal transparent visible={visible && !showSignUpModal} animationType="fade" onRequestClose={onClose}>
-                <TouchableWithoutFeedback
-                    onPress={() => {
-                        Keyboard.dismiss();
-                        onClose(); // closes modal when pressing outside
-                    }}
-                >
+            <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+                <TouchableWithoutFeedback onPress={() => { Keyboard.dismiss(); onClose(); }}>
                     <View style={styles.overlay}>
-                        <TouchableWithoutFeedback onPress={() => {}}>
-                            <View style={styles.popup}>
+                        <TouchableWithoutFeedback>
+                            <Animated.View
+                                style={[
+                                    styles.popup,
+                                    { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+                                ]}
+                            >
                                 <Text style={styles.title}>Login</Text>
 
                                 <View style={styles.inputGroup}>
@@ -62,7 +127,7 @@ export default function LoginComponent({ visible, onClose }) {
                                         keyboardType="email-address"
                                         autoCapitalize="none"
                                     />
-                                    {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+                                    {emailError && <Text style={styles.errorText}>{emailError}</Text>}
                                 </View>
 
                                 <View style={styles.inputGroup}>
@@ -73,10 +138,15 @@ export default function LoginComponent({ visible, onClose }) {
                                         value={password}
                                         secureTextEntry
                                     />
-                                    {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+                                    {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
                                 </View>
 
                                 <View style={styles.horizontalLine} />
+                                {unauthorizedError && (
+                                    <Animated.View style={[styles.InvalidLoginAlert, { transform: [{ translateX: shakeAnim }] }]}>
+                                        <Text style={styles.closeText}>{unauthorizedError}</Text>
+                                    </Animated.View>
+                                )}
 
                                 <TouchableOpacity
                                     style={styles.closeButton}
@@ -88,7 +158,7 @@ export default function LoginComponent({ visible, onClose }) {
                                         if (!passwordValid) setPasswordError('Password must be strong');
 
                                         if (emailValid && passwordValid) {
-                                            onClose();
+                                            login();
                                         }
                                     }}
                                 >
@@ -106,13 +176,12 @@ export default function LoginComponent({ visible, onClose }) {
                                         <Text style={{ color: '#007BFF' }}>Register</Text>
                                     </TouchableOpacity>
                                 </View>
-                            </View>
+                            </Animated.View>
                         </TouchableWithoutFeedback>
                     </View>
                 </TouchableWithoutFeedback>
             </Modal>
 
-            {/* SignUp Modal */}
             {showSignUpModal && (
                 <SignUpComponent
                     visible={showSignUpModal}
@@ -161,8 +230,20 @@ const styles = StyleSheet.create({
         alignItems: "center",
         width: 200,
     },
+    InvalidLoginAlert: {
+        paddingVertical: 8,
+        paddingHorizontal: 95,
+        backgroundColor: 'lightgrey',
+        borderRadius: 0,
+        justifyContent: "center",
+        alignItems: "center",
+        width: 300,
+        borderLeftWidth: 3,
+        borderColor: "red",
+        marginBottom: 16,
+    },
     closeText: {
-        color: '#fff',
+        color: '#4a3d48',
         fontWeight: '500',
     },
     inputGroup: {
