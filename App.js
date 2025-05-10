@@ -10,12 +10,10 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import LoginDropdown from './components/LoginDropdown';
 import LoginComponent from './components/LoginComponent';
-import SignUpComponent from './components/SignUpComponent';
 
 export default function App() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showSignUpModal, setShowSignUpModal] = useState(false);
 
   const toggleDropdown = () => {
     setShowDropdown((prev) => !prev);
@@ -68,15 +66,7 @@ export default function App() {
           onClose={() => setShowLoginModal(false)}
           switchToSignUp={() => {
             setShowLoginModal(false);
-            setShowSignUpModal(true);
           }}
-        />
-      )}
-
-      {showSignUpModal && (
-        <SignUpComponent
-          visible={showSignUpModal}
-          onClose={() => setShowSignUpModal(false)}
         />
       )}
 

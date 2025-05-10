@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Modal,
     View,
@@ -9,9 +9,8 @@ import {
     TextInput,
     TouchableWithoutFeedback,
     Keyboard,
-    Animated
+    ScrollView
 } from 'react-native';
-import SignUpComponent from './SignUpComponent';
 
 export default function LoginComponent({ visible, onClose }) {
     const [username, setUsername] = useState('');
@@ -21,50 +20,23 @@ export default function LoginComponent({ visible, onClose }) {
     const [unauthorizedError, setUnauthorizedError] = useState('');
     const [showSignUpModal, setShowSignUpModal] = useState(false);
 
-    const shakeAnim = useRef(new Animated.Value(0)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    const [signUpData, setSignUpData] = useState({
+        firstName: '',
+        maidenName: '',
+        surname: '',
+        idNumber: '',
+        email: '',
+        confirmEmail: '',
+        password: '',
+        confirmPassword: ''
+    });
 
-    useEffect(() => {
-        if (visible) {
-            fadeAnim.setValue(0);
-            scaleAnim.setValue(0.8);
-            setTimeout(() => {
-                Animated.parallel([
-                    Animated.timing(fadeAnim, {
-                        toValue: 1,
-                        duration: 300,
-                        useNativeDriver: true,
-                    }),
-                    Animated.spring(scaleAnim, {
-                        toValue: 1,
-                        friction: 6,
-                        tension: 80,
-                        useNativeDriver: true,
-                    }),
-                ]).start();
-            }, 50);
-        }
-    }, [visible]);
-    
-
-    useEffect(() => {
-        if (unauthorizedError) {
-            Animated.sequence([
-                Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-                Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-                Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
-                Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
-                Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
-            ]).start();
-
-            const timeout = setTimeout(() => {
-                setUnauthorizedError('');
-            }, 4000);
-
-            return () => clearTimeout(timeout);
-        }
-    }, [unauthorizedError]);
+    const [signUpErrors, setSignUpErrors] = useState({
+        email: '',
+        confirmEmail: '',
+        password: '',
+        confirmPassword: ''
+    });
 
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const validatePassword = (password) =>
@@ -80,9 +52,60 @@ export default function LoginComponent({ visible, onClose }) {
         setPasswordError(validatePassword(text) ? '' : 'Password must be 8+ characters, incl. uppercase, lowercase, number, and special char.');
     };
 
-    const onRegister = () => {
-        setShowSignUpModal(true);
-        onClose(); 
+    const handleSignUpChange = (field, value) => {
+        setSignUpData(prev => ({ ...prev, [field]: value }));
+
+        if (field === 'email' || field === 'confirmEmail') {
+            const emailValid = validateEmail(value);
+            const emailsMatch = field === 'email'
+                ? value === signUpData.confirmEmail
+                : value === signUpData.email;
+
+            setSignUpErrors(prev => ({
+                ...prev,
+                email: field === 'email' && !emailValid ? 'Invalid email format' : '',
+                confirmEmail: (field === 'confirmEmail' && !emailValid)
+                    ? 'Invalid email format'
+                    : (!emailsMatch ? 'Emails do not match' : '')
+            }));
+        }
+
+        if (field === 'password' || field === 'confirmPassword') {
+            const passwordValid = validatePassword(value);
+            const passwordsMatch = field === 'password'
+                ? value === signUpData.confirmPassword
+                : value === signUpData.password;
+
+            setSignUpErrors(prev => ({
+                ...prev,
+                password: field === 'password' && !passwordValid
+                    ? 'Password must be 8+ characters, incl. uppercase, lowercase, number, and special char.'
+                    : '',
+                confirmPassword: (field === 'confirmPassword' && !passwordValid)
+                    ? 'Password must be 8+ characters, incl. uppercase, lowercase, number, and special char.'
+                    : (!passwordsMatch ? 'Passwords do not match' : '')
+            }));
+        }
+    };
+
+    const handleSignUpSubmit = () => {
+        const emailValid = validateEmail(signUpData.email);
+        const emailsMatch = signUpData.email === signUpData.confirmEmail;
+        const passwordValid = validatePassword(signUpData.password);
+        const passwordsMatch = signUpData.password === signUpData.confirmPassword;
+
+        setSignUpErrors({
+            email: emailValid ? '' : 'Invalid email format',
+            confirmEmail: emailsMatch ? '' : 'Emails do not match',
+            password: passwordValid ? '' : 'Password must be 8+ characters, incl. uppercase, lowercase, number, and special char.',
+            confirmPassword: passwordsMatch ? '' : 'Passwords do not match'
+        });
+
+        if (emailValid && emailsMatch && passwordValid && passwordsMatch) {
+            console.log('Sign up data:', signUpData);
+            setShowSignUpModal(false);
+            onClose();
+        }
     };
 
     const login = async () => {
@@ -98,24 +121,32 @@ export default function LoginComponent({ visible, onClose }) {
                 onClose();
             } else if (response.status === 401) {
                 setUnauthorizedError("Invalid Credentials");
+                setTimeout(() => setUnauthorizedError(''), 4000);
             }
         } catch (err) {
             console.error("Network error:", err);
         }
     };
 
+    const handleRegister = () => {
+        // Simulate successful registration
+        setShowSignUpModal(false);
+        onClose(); // Close both modals
+    };
+
     return (
         <>
-            <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-                <TouchableWithoutFeedback onPress={() => { Keyboard.dismiss(); onClose(); }}>
+            {/* Login Modal */}
+            <Modal
+                transparent
+                visible={visible && !showSignUpModal}
+                onRequestClose={onClose}
+                animationType="fade"
+            >
+                <TouchableWithoutFeedback onPress={onClose}>
                     <View style={styles.overlay}>
-                        <TouchableWithoutFeedback>
-                            <Animated.View
-                                style={[
-                                    styles.popup,
-                                    { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
-                                ]}
-                            >
+                        <TouchableWithoutFeedback onPress={() => { }}>
+                            <View style={styles.popup}>
                                 <Text style={styles.title}>Login</Text>
 
                                 <View style={styles.inputGroup}>
@@ -143,9 +174,9 @@ export default function LoginComponent({ visible, onClose }) {
 
                                 <View style={styles.horizontalLine} />
                                 {unauthorizedError && (
-                                    <Animated.View style={[styles.InvalidLoginAlert, { transform: [{ translateX: shakeAnim }] }]}>
+                                    <View style={styles.InvalidLoginAlert}>
                                         <Text style={styles.closeText}>{unauthorizedError}</Text>
-                                    </Animated.View>
+                                    </View>
                                 )}
 
                                 <TouchableOpacity
@@ -153,13 +184,9 @@ export default function LoginComponent({ visible, onClose }) {
                                     onPress={() => {
                                         const emailValid = validateEmail(username);
                                         const passwordValid = validatePassword(password);
-
                                         if (!emailValid) setEmailError('Please enter a valid email');
                                         if (!passwordValid) setPasswordError('Password must be strong');
-
-                                        if (emailValid && passwordValid) {
-                                            login();
-                                        }
+                                        if (emailValid && passwordValid) login();
                                     }}
                                 >
                                     <Text style={styles.closeText}>Login</Text>
@@ -172,22 +199,131 @@ export default function LoginComponent({ visible, onClose }) {
                                 <View style={styles.horizontalLine} />
                                 <View style={{ flexDirection: 'row' }}>
                                     <Text>New to Finder EHR? </Text>
-                                    <TouchableOpacity onPress={onRegister}>
+                                    <TouchableOpacity onPress={() => setShowSignUpModal(true)}>
                                         <Text style={{ color: '#007BFF' }}>Register</Text>
                                     </TouchableOpacity>
                                 </View>
-                            </Animated.View>
+                            </View>
                         </TouchableWithoutFeedback>
                     </View>
                 </TouchableWithoutFeedback>
             </Modal>
 
-            {showSignUpModal && (
-                <SignUpComponent
-                    visible={showSignUpModal}
-                    onClose={() => setShowSignUpModal(false)}
-                />
-            )}
+            {/* Sign Up Modal */}
+            <Modal
+                transparent
+                visible={showSignUpModal}
+                animationType="fade"
+                onRequestClose={() => setShowSignUpModal(false)}
+            >
+                <TouchableWithoutFeedback onPress={() => setShowSignUpModal(false)}>
+                    <View style={styles.overlay}>
+                        <TouchableWithoutFeedback onPress={() => { }}>
+                            <View style={[styles.popup, { maxHeight: Dimensions.get('window').height * 0.8 }]}>
+                                <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+                                    <Text style={styles.title}>Sign Up</Text>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>First Name</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={signUpData.firstName}
+                                            onChangeText={(text) => handleSignUpChange('firstName', text)}
+                                        />
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Maiden Name</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={signUpData.maidenName}
+                                            onChangeText={(text) => handleSignUpChange('maidenName', text)}
+                                        />
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Surname</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={signUpData.surname}
+                                            onChangeText={(text) => handleSignUpChange('surname', text)}
+                                        />
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>NRIC/FIN/Passport no.</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={signUpData.idNumber}
+                                            onChangeText={(text) => handleSignUpChange('idNumber', text)}
+                                        />
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Email</Text>
+                                        <TextInput
+                                            style={[styles.input, signUpErrors.email ? styles.inputError : null]}
+                                            value={signUpData.email}
+                                            onChangeText={(text) => handleSignUpChange('email', text)}
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                        />
+                                        {signUpErrors.email && <Text style={styles.errorText}>{signUpErrors.email}</Text>}
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Confirm Email</Text>
+                                        <TextInput
+                                            style={[styles.input, signUpErrors.confirmEmail ? styles.inputError : null]}
+                                            value={signUpData.confirmEmail}
+                                            onChangeText={(text) => handleSignUpChange('confirmEmail', text)}
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                        />
+                                        {signUpErrors.confirmEmail && <Text style={styles.errorText}>{signUpErrors.confirmEmail}</Text>}
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Password</Text>
+                                        <TextInput
+                                            style={[styles.input, signUpErrors.password ? styles.inputError : null]}
+                                            value={signUpData.password}
+                                            onChangeText={(text) => handleSignUpChange('password', text)}
+                                            secureTextEntry
+                                        />
+                                        {signUpErrors.password && <Text style={styles.errorText}>{signUpErrors.password}</Text>}
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Confirm Password</Text>
+                                        <TextInput
+                                            style={[styles.input, signUpErrors.confirmPassword ? styles.inputError : null]}
+                                            value={signUpData.confirmPassword}
+                                            onChangeText={(text) => handleSignUpChange('confirmPassword', text)}
+                                            secureTextEntry
+                                        />
+                                        {signUpErrors.confirmPassword && <Text style={styles.errorText}>{signUpErrors.confirmPassword}</Text>}
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={styles.closeButton}
+                                        onPress={handleSignUpSubmit}
+                                    >
+                                        <Text style={styles.closeText}>Sign Up</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={{ alignSelf: 'center', marginTop: 10 }}
+                                        onPress={() => setShowSignUpModal(false)}
+                                    >
+                                        <Text style={{ color: '#007BFF' }}>Back to Login</Text>
+                                    </TouchableOpacity>
+                                </ScrollView>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
         </>
     );
 }
@@ -195,87 +331,89 @@ export default function LoginComponent({ visible, onClose }) {
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     popup: {
-        width: Dimensions.get('window').width * 0.8,
+        width: Dimensions.get('window').width * 0.85,
         backgroundColor: '#fff',
         borderRadius: 12,
-        padding: 20,
-        elevation: 5,
-        alignItems: 'center',
+        padding: 24,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
     },
     title: {
-        fontSize: 20,
-        marginBottom: 12,
-    },
-    closeButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        backgroundColor: '#007BFF',
-        borderRadius: 6,
-        justifyContent: "center",
-        alignItems: "center",
-        width: 200,
-    },
-    forgotPassButton: {
-        marginTop: 10,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        backgroundColor: 'lightgrey',
-        borderRadius: 6,
-        justifyContent: "center",
-        alignItems: "center",
-        width: 200,
-    },
-    InvalidLoginAlert: {
-        paddingVertical: 8,
-        paddingHorizontal: 95,
-        backgroundColor: 'lightgrey',
-        borderRadius: 0,
-        justifyContent: "center",
-        alignItems: "center",
-        width: 300,
-        borderLeftWidth: 3,
-        borderColor: "red",
-        marginBottom: 16,
-    },
-    closeText: {
-        color: '#4a3d48',
-        fontWeight: '500',
+        fontSize: 22,
+        fontWeight: '600',
+        marginBottom: 20,
+        textAlign: 'center',
+        color: '#222',
     },
     inputGroup: {
-        width: '100%',
-        marginBottom: 10,
+        marginBottom: 16,
     },
     label: {
-        marginBottom: 4,
-        fontWeight: '500',
         fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 6,
     },
     input: {
-        height: 40,
+        height: 35,
         borderWidth: 1,
-        paddingHorizontal: 10,
-        width: '100%',
-        borderRadius: 4,
         borderColor: '#ccc',
+        borderRadius: 6,
+        paddingHorizontal: 12,
+        backgroundColor: '#fafafa',
+        width: "98%"
     },
     inputError: {
-        borderColor: 'red',
+        borderColor: '#e53935',
     },
     errorText: {
-        color: 'red',
+        color: '#e53935',
         fontSize: 12,
         marginTop: 4,
-        alignSelf: 'flex-start',
+        paddingLeft: 2,
+    },
+    closeButton: {
+        backgroundColor: '#007BFF',
+        paddingVertical: 10,
+        borderRadius: 6,
+        alignItems: 'center',
+        marginTop: 12,
+        width: '98%',
+    },
+    forgotPassButton: {
+        backgroundColor: '#f0f0f0',
+        paddingVertical: 10,
+        borderRadius: 6,
+        alignItems: 'center',
+        marginTop: 10,
+        width: '98%',
+    },
+    closeText: {
+        color: 'black',
+        fontWeight: '600',
+        fontSize: 15,
     },
     horizontalLine: {
         height: 1,
-        backgroundColor: '#ccc',
+        backgroundColor: '#e0e0e0',
+        marginVertical: 20,
+    },
+    InvalidLoginAlert: {
+        backgroundColor: '#fdecea',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderLeftWidth: 4,
+        borderLeftColor: '#e53935',
+        borderRadius: 4,
+        marginBottom: 16,
         width: '100%',
-        marginVertical: 16,
     },
 });
