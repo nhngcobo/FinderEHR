@@ -118,6 +118,7 @@ export default function LoginComponent({ visible, onClose }) {
 
             const data = await response.json();
             if (response.ok) {
+                console.log(data)
                 onClose();
             } else if (response.status === 401) {
                 setUnauthorizedError("Invalid Credentials");
@@ -136,7 +137,6 @@ export default function LoginComponent({ visible, onClose }) {
 
     return (
         <>
-            {/* Login Modal */}
             <Modal
                 transparent
                 visible={visible && !showSignUpModal}
@@ -209,7 +209,6 @@ export default function LoginComponent({ visible, onClose }) {
                 </TouchableWithoutFeedback>
             </Modal>
 
-            {/* Sign Up Modal */}
             <Modal
                 transparent
                 visible={showSignUpModal}
